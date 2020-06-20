@@ -52,6 +52,16 @@ Within these limits, you can use, redistribute, and/or modify it.
 3. Change Logs
 ---------------
 
+Version 6.0.b
+
+Shotaro Ohmori made a fix which is needed to play games in floodgate.
+This adopts the fix.
+ 
+Version 6.0.a
+
+This corrects some important errors found in 'learn1.c' and 'next.c'.
+I am thanksful to Tomoyuki Kaneko for his kind report.
+
 Version 6.0
 
 Search() function is modified to ignore moves which receive negative
@@ -435,9 +445,6 @@ directory to dump log files.
 - display ['num']
     This command prints the shogi board. If you want to flip the
     board, set 'num' to 2. If not, set it to 1.
-
-- eking_value
-    This command prints the entering king value of both players.
 
 - s
     Bonanza makes a prompt reply while thinking as soon as this
