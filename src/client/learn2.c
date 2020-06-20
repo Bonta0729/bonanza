@@ -26,6 +26,9 @@ ini_param( param_t *p )
 {
   int i;
 
+#ifdef LEARN_EKING
+  for (i = 0; i < 7; i++) p->eking[i] = 0.0;
+#else
   p->pawn       = p->lance      = p->knight     = p->silver     = 0.0;
   p->gold       = p->bishop     = p->rook       = p->pro_pawn   = 0.0;
   p->pro_lance  = p->pro_knight = p->pro_silver = p->horse      = 0.0;
@@ -34,6 +37,7 @@ ini_param( param_t *p )
 #define Foo(x) p->x = 0;
   GO_THROUGH_ALL_PARAMETERS_BY_FOO;
 #undef Foo
+#endif
 }
 
 
@@ -42,6 +46,9 @@ add_param( param_t *p1, const param_t *p2 )
 {
   int i;
 
+#ifdef LEARN_EKING
+  for (i = 0; i < 7; i++) p1->eking[i] += p2->eking[i];
+#else
   p1->pawn       += p2->pawn;
   p1->lance      += p2->lance;
   p1->knight     += p2->knight;
@@ -59,6 +66,7 @@ add_param( param_t *p1, const param_t *p2 )
 #define Foo(x) p1->x += p2->x;
   GO_THROUGH_ALL_PARAMETERS_BY_FOO;
 #undef Foo
+#endif
 }
 
 
@@ -67,24 +75,27 @@ fill_param_zero( void )
 {
   int i;
 
-  p_value[15+pawn]       = 100;
-  p_value[15+lance]      = 300;
-  p_value[15+knight]     = 300;
-  p_value[15+silver]     = 400;
-  p_value[15+gold]       = 500;
-  p_value[15+bishop]     = 600;
-  p_value[15+rook]       = 700;
-  p_value[15+pro_pawn]   = 400;
-  p_value[15+pro_lance]  = 400;
-  p_value[15+pro_knight] = 400;
-  p_value[15+pro_silver] = 500;
-  p_value[15+horse]      = 800;
-  p_value[15+dragon]     = 1000;
+#ifdef LEARN_EKING
+  for (i = 0; i < 7; i++) eking[i] = 0;
+#else
+  p_value[15 + pawn]       = 87;
+  p_value[15 + lance]      = 225;
+  p_value[15 + knight]     = 250;
+  p_value[15 + silver]     = 369;
+  p_value[15 + gold]       = 444;
+  p_value[15 + bishop]     = 575;
+  p_value[15 + rook]       = 655;
+  p_value[15 + pro_pawn]   = 530;
+  p_value[15 + pro_lance]  = 495;
+  p_value[15 + pro_knight] = 505;
+  p_value[15 + pro_silver] = 490;
+  p_value[15 + horse]      = 830;
+  p_value[15 + dragon]     = 945;
 
 #define Foo(x) x = 0;
   GO_THROUGH_ALL_PARAMETERS_BY_FOO;
 #undef Foo
-
+#endif
   set_derivative_param();
 }
 
@@ -92,6 +103,7 @@ fill_param_zero( void )
 void
 param_sym( param_t *p )
 {
+#if 0
   int q, r, il, ir, ir0, jl, jr, k0l, k0r, k1l, k1r;
 
   for ( k0l = 0; k0l < nsquare; k0l++ ) {
@@ -161,6 +173,7 @@ param_sym( param_t *p )
       }
     }
   }
+#endif
 }
 
 
@@ -242,9 +255,13 @@ calc_penalty( void )
 
   u64sum = 0;
 
+#ifdef LEARN_EKING
+  for (i = 0; i < 7; i++) u64sum += (uint64_t)abs((int)eking[i]);
+#else
 #define Foo(x) u64sum += (uint64_t)abs((int)x);
   GO_THROUGH_ALL_PARAMETERS_BY_FOO;
 #undef Foo
+#endif
 
   return (double)u64sum * FV_PENALTY;
 }
@@ -253,6 +270,11 @@ calc_penalty( void )
 void
 renovate_param( const param_t *pd )
 {
+#ifdef LEARN_EKING
+  int i;
+
+  for (i = 0; i < 7; i++) rparam(&eking[i], pd->eking[i]);
+#else
   double *pv[14], *p;
   double v[16];
   unsigned int u32rand, u;
@@ -312,6 +334,7 @@ renovate_param( const param_t *pd )
 #define Foo(v) rparam( &v, pd->v );
   GO_THROUGH_ALL_PARAMETERS_BY_FOO;
 #undef Foo
+#endif
 
   fv_sym();
   set_derivative_param();
@@ -399,8 +422,21 @@ out_param( void )
       str_error = str_io_error;
       return -2;
     }
-  
+  return file_close(pf);
+ #ifdef LEARN_EKING
+   pf = file_open("fv_eking.bin", "wb");
+   if (pf == NULL) { return -2; }
+
+   size = 7;
+   if (fwrite(eking, sizeof(short), size, pf) != size)
+     {
+      str_error = str_io_error;
+      return -2;
+     }
+
   return file_close( pf );
+#endif
+
 }
 
 
@@ -411,6 +447,11 @@ inc_param( const tree_t * restrict ptree, param_t * restrict pd, double dinc )
   int anpiece[16], list0[52], list1[52];
   int nlist, sq_bk, sq_wk, k0, k1, l0, l1, i, j;
 
+#ifdef LEARN_EKING
+  int ek_b = eking_value_black(ptree), ek_w = eking_value_white(ptree);
+  if (ek_b >= 0) pd->eking[ek_b] += (float)dinc;
+  if (ek_w >= 0) pd->eking[ek_w] -= (float)dinc;
+#else
   f     = (float)( dinc / (double)FV_SCALE );
   nlist = make_list( ptree, list0, list1, anpiece, pd, f );
   sq_bk = SQ_BKING;
@@ -443,6 +484,7 @@ inc_param( const tree_t * restrict ptree, param_t * restrict pd, double dinc )
 	  pd->PcPcOnSq( sq_wk, k1, l1 ) -= f;
 	}
     }
+#endif
 }
 
 
@@ -450,6 +492,9 @@ static int
 make_list( const tree_t * restrict ptree, int list0[52], int list1[52],
 	   int anpiece[16], param_t * restrict pd, float f )
 {
+#ifdef LEARN_EKING
+  return 0;
+#else
   bitboard_t bb;
   int list2[34];
   int nlist, sq, sq_bk0, sq_bk1, sq_wk0, sq_wk1, n2, i, itemp1, itemp2;
@@ -797,6 +842,7 @@ make_list( const tree_t * restrict ptree, int list0[52], int list1[52],
 
   assert( nlist <= 52 );
   return nlist;
+#endif
 }
 
 
@@ -824,8 +870,9 @@ rparam( short *pv, float dv )
   istep += brand();
   v      = *pv;
 
-  if      ( v > 0 ) { dv -= (float)FV_PENALTY; }
-  else if ( v < 0 ) { dv += (float)FV_PENALTY; }
+  if (dv == 0) return; // Œù”z‚ªƒ[ƒ‚Ì‚Æ‚«‚Í“®‚©‚³‚È‚¢
+  else if (v > 0) { dv -= (float)(FV_PENALTY + ((L2_C1*1.05)*(L2_C1*1.05)*L2_C2)); }
+  else if (v < 0) { dv += (float)(FV_PENALTY + ((L2_C1*1.08)*(L2_C1*1.08)*L2_C2*2.718)); } // e=2.718  e^2=7.389
 
   if      ( dv >= 0.0 && v <= SHRT_MAX - istep ) { v += istep; }
   else if ( dv <= 0.0 && v >= SHRT_MIN + istep ) { v -= istep; }

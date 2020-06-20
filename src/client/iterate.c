@@ -55,7 +55,7 @@ iterate( tree_t * restrict ptree )
 		  ( mnj_depth_stable == INT_MAX ) ? "" : " stable" );
 
 
-#if defined(USI)
+#if defined(USIXX)
 	  if ( usi_mode != usi_off )
 	    {
 	      char str_usi[6];
@@ -68,38 +68,142 @@ iterate( tree_t * restrict ptree )
 	}
     }
 
+  /* detect ENTERING_KING_BONUS tactics */
+#if defined(ENTERING_KING_BONUS)
+  if (!ENTERING_KING_flag && 96 < ptree->nrep)
+  {
+	  //65手目以降、後手番の玉の位置が入玉フラグ位置
+	  if (root_turn == white
+		  && (BOARD[A7] == -king || BOARD[C7] == -king
+			  || BOARD[G7] == -king || BOARD[I7] == -king
+			  || BOARD[A6] == -king || BOARD[B6] == -king || BOARD[C6] == -king
+			  || BOARD[D6] == -king || BOARD[E6] == -king || BOARD[F6] == -king
+			  || BOARD[G6] == -king || BOARD[H6] == -king || BOARD[I6] == -king
+			  || BOARD[A5] == -king || BOARD[B5] == -king || BOARD[C5] == -king
+			  || BOARD[D5] == -king || BOARD[E5] == -king || BOARD[F5] == -king
+			  || BOARD[G5] == -king || BOARD[H5] == -king || BOARD[I5] == -king
+			  || BOARD[A4] == -king || BOARD[B4] == -king || BOARD[C4] == -king
+			  || BOARD[D4] == -king || BOARD[E4] == -king || BOARD[F4] == -king
+			  || BOARD[G4] == -king || BOARD[H4] == -king || BOARD[I4] == -king
+			  || BOARD[A3] == -king || BOARD[B3] == -king || BOARD[C3] == -king
+			  || BOARD[D3] == -king || BOARD[E3] == -king || BOARD[F3] == -king
+			  || BOARD[G3] == -king || BOARD[H3] == -king || BOARD[I3] == -king
+			  || BOARD[A2] == -king || BOARD[B2] == -king || BOARD[C2] == -king
+			  || BOARD[D2] == -king || BOARD[E2] == -king || BOARD[F2] == -king
+			  || BOARD[G2] == -king || BOARD[H2] == -king || BOARD[I2] == -king
+			  || BOARD[A1] == -king || BOARD[B1] == -king || BOARD[C1] == -king
+			  || BOARD[D1] == -king || BOARD[E1] == -king || BOARD[F1] == -king
+			  || BOARD[G1] == -king || BOARD[H1] == -king || BOARD[I1] == -king
+			  || BOARD[A9] == king || BOARD[B9] == king || BOARD[C9] == king   //先手玉の位置が入玉フラグ位置
+			  || BOARD[D9] == king || BOARD[E9] == king || BOARD[F9] == king
+			  || BOARD[G9] == king || BOARD[H9] == king || BOARD[I9] == king
+			  || BOARD[A8] == king || BOARD[B8] == king || BOARD[C8] == king
+			  || BOARD[D8] == king || BOARD[E8] == king || BOARD[F8] == king
+			  || BOARD[G8] == king || BOARD[H8] == king || BOARD[I8] == king
+			  || BOARD[A7] == king || BOARD[B7] == king || BOARD[C7] == king
+			  || BOARD[D7] == king || BOARD[E7] == king || BOARD[F7] == king
+			  || BOARD[G7] == king || BOARD[H7] == king || BOARD[I7] == king
+			  || BOARD[A6] == king || BOARD[B6] == king || BOARD[C6] == king
+			  || BOARD[D6] == king || BOARD[E6] == king || BOARD[F6] == king
+			  || BOARD[G6] == king || BOARD[H6] == king || BOARD[I6] == king
+			  || BOARD[A5] == king || BOARD[B5] == king || BOARD[C5] == king
+			  || BOARD[D5] == king || BOARD[E5] == king || BOARD[F5] == king
+			  || BOARD[G5] == king || BOARD[H5] == king || BOARD[I5] == king
+			  || BOARD[A4] == king || BOARD[B4] == king || BOARD[C4] == king
+			  || BOARD[D4] == king || BOARD[E4] == king || BOARD[F4] == king
+			  || BOARD[G4] == king || BOARD[H4] == king || BOARD[I4] == king
+			  || BOARD[A3] == king || BOARD[C3] == king
+			  || BOARD[G3] == king || BOARD[I3] == king))
+	  {
+		  Out("\nENTERING_KING_BONUS TURNED ON (BLACK)\n\n");
+		  ENTERING_KING_flag = 1;
+		  ehash_clear();
+		  if (ini_trans_table() < 0) { return -1; }
+	  }
+	  //65手目以降、先手番の玉の位置が入玉フラグ位置
+	  if (root_turn == black
+		  && (BOARD[A9] == king || BOARD[B9] == king || BOARD[C9] == king
+			  || BOARD[D9] == king || BOARD[E9] == king || BOARD[F9] == king
+			  || BOARD[G9] == king || BOARD[H9] == king || BOARD[I9] == king
+			  || BOARD[A8] == king || BOARD[B8] == king || BOARD[C8] == king
+			  || BOARD[D8] == king || BOARD[E8] == king || BOARD[F8] == king
+			  || BOARD[G8] == king || BOARD[H8] == king || BOARD[I8] == king
+			  || BOARD[A7] == king || BOARD[B7] == king || BOARD[C7] == king
+			  || BOARD[D7] == king || BOARD[E7] == king || BOARD[F7] == king
+			  || BOARD[G7] == king || BOARD[H7] == king || BOARD[I7] == king
+			  || BOARD[A6] == king || BOARD[B6] == king || BOARD[C6] == king
+			  || BOARD[D6] == king || BOARD[E6] == king || BOARD[F6] == king
+			  || BOARD[G6] == king || BOARD[H6] == king || BOARD[I6] == king
+			  || BOARD[A5] == king || BOARD[B5] == king || BOARD[C5] == king
+			  || BOARD[D5] == king || BOARD[E5] == king || BOARD[F5] == king
+			  || BOARD[G5] == king || BOARD[H5] == king || BOARD[I5] == king
+			  || BOARD[A4] == king || BOARD[B4] == king || BOARD[C4] == king
+			  || BOARD[D4] == king || BOARD[E4] == king || BOARD[F4] == king
+			  || BOARD[G4] == king || BOARD[H4] == king || BOARD[I4] == king
+			  || BOARD[A3] == king || BOARD[C3] == king
+			  || BOARD[G3] == king || BOARD[I3] == king
+			  || BOARD[A7] == -king || BOARD[C7] == -king   //後手玉の位置が入玉フラグ位置
+			  || BOARD[G7] == -king || BOARD[I7] == -king
+			  || BOARD[A6] == -king || BOARD[B6] == -king || BOARD[C6] == -king
+			  || BOARD[D6] == -king || BOARD[E6] == -king || BOARD[F6] == -king
+			  || BOARD[G6] == -king || BOARD[H6] == -king || BOARD[I6] == -king
+			  || BOARD[A5] == -king || BOARD[B5] == -king || BOARD[C5] == -king
+			  || BOARD[D5] == -king || BOARD[E5] == -king || BOARD[F5] == -king
+			  || BOARD[G5] == -king || BOARD[H5] == -king || BOARD[I5] == -king
+			  || BOARD[A4] == -king || BOARD[B4] == -king || BOARD[C4] == -king
+			  || BOARD[D4] == -king || BOARD[E4] == -king || BOARD[F4] == -king
+			  || BOARD[G4] == -king || BOARD[H4] == -king || BOARD[I4] == -king
+			  || BOARD[A3] == -king || BOARD[B3] == -king || BOARD[C3] == -king
+			  || BOARD[D3] == -king || BOARD[E3] == -king || BOARD[F3] == -king
+			  || BOARD[G3] == -king || BOARD[H3] == -king || BOARD[I3] == -king
+			  || BOARD[A2] == -king || BOARD[B2] == -king || BOARD[C2] == -king
+			  || BOARD[D2] == -king || BOARD[E2] == -king || BOARD[F2] == -king
+			  || BOARD[G2] == -king || BOARD[H2] == -king || BOARD[I2] == -king
+			  || BOARD[A1] == -king || BOARD[B1] == -king || BOARD[C1] == -king
+			  || BOARD[D1] == -king || BOARD[E1] == -king || BOARD[F1] == -king
+			  || BOARD[G1] == -king || BOARD[H1] == -king || BOARD[I1] == -king))
+	  {
+		  Out("\nENTERING_KING_BONUS TURNED ON (WHITE)\n\n");
+		  ENTERING_KING_flag = 2;
+		  ehash_clear();
+		  if (ini_trans_table() < 0) { return -1; }
+	  }
+}
+#endif
+
   /* detect inaniwa tactics */
 #if defined(INANIWA_SHIFT)
-  if ( ! inaniwa_flag && 19 < ptree->nrep )
-    {
-      if ( root_turn == white
-	   && ( BOARD[A7]==-pawn || BOARD[A6]==-pawn || BOARD[A5]==-pawn )
-	   && BOARD[B7] == -pawn && BOARD[C7] == -pawn
-	   && BOARD[D7] == -pawn && BOARD[E7] == -pawn
-	   && BOARD[F7] == -pawn && BOARD[G7] == -pawn
-	   && BOARD[H7] == -pawn
-	   && ( BOARD[I7]==-pawn || BOARD[I6]==-pawn || BOARD[I5]==-pawn ) )
-	{
-	  Out( "\nINANIWA SHIFT TURNED ON (BLACK)\n\n" );
-  	  inaniwa_flag = 1;
-	  ehash_clear();
-	  if ( ini_trans_table() < 0 ) { return -1; }
-	}
-
-      if ( root_turn == black
-	   && ( BOARD[A3]==pawn || BOARD[A4]==pawn || BOARD[A5] == pawn )
-	   && BOARD[B3] == pawn && BOARD[C3] == pawn
-	   && BOARD[D3] == pawn && BOARD[E3] == pawn
-	   && BOARD[F3] == pawn && BOARD[G3] == pawn
-	   && BOARD[H3] == pawn
-	   && ( BOARD[I3]==pawn || BOARD[I4]==pawn || BOARD[I5]==pawn ) )
-	{
-	  Out( "\nINANIWA SHIFT TURNED ON (WHITE)\n\n" );
-	  inaniwa_flag = 2;
-	  ehash_clear();
-	  if ( ini_trans_table() < 0 ) { return -1; }
-	}
-    }
+  if (!inaniwa_flag && 19 < ptree->nrep)
+  {
+	  //20手目以降、後手番の歩が突かれていない
+	  if (root_turn == white
+		  && (BOARD[A7] == -pawn || BOARD[A6] == -pawn || BOARD[A5] == -pawn)
+		  && BOARD[B7] == -pawn && BOARD[C7] == -pawn
+		  && BOARD[D7] == -pawn && BOARD[E7] == -pawn
+		  && BOARD[F7] == -pawn && BOARD[G7] == -pawn
+		  && BOARD[H7] == -pawn
+		  && (BOARD[I7] == -pawn || BOARD[I6] == -pawn || BOARD[I5] == -pawn))
+	  {
+		  Out("\nINANIWA SHIFT TURNED ON (BLACK)\n\n");
+		  inaniwa_flag = 1;
+		  ehash_clear();
+		  if (ini_trans_table() < 0) { return -1; }
+	  }
+	  //20手目以降、先手番の歩が突かれていない
+	  if (root_turn == black
+		  && (BOARD[A3] == pawn || BOARD[A4] == pawn || BOARD[A5] == pawn)
+		  && BOARD[B3] == pawn && BOARD[C3] == pawn
+		  && BOARD[D3] == pawn && BOARD[E3] == pawn
+		  && BOARD[F3] == pawn && BOARD[G3] == pawn
+		  && BOARD[H3] == pawn
+		  && (BOARD[I3] == pawn || BOARD[I4] == pawn || BOARD[I5] == pawn))
+	  {
+		  Out("\nINANIWA SHIFT TURNED ON (WHITE)\n\n");
+		  inaniwa_flag = 2;
+		  ehash_clear();
+		  if (ini_trans_table() < 0) { return -1; }
+	  }
+  }
 #endif
   
 

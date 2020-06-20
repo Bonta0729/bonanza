@@ -21,6 +21,10 @@ static int CONV make_list( const tree_t * restrict ptree,
 			   int * restrict pscore,
 			   int list0[52], int list1[52] );
 
+#if defined(ENTERING_KING_BONUS)
+static int ENTERING_KING_score(const tree_t * restrict ptree);
+#endif
+
 #if defined(INANIWA_SHIFT)
 static int inaniwa_score( const tree_t * restrict ptree );
 #endif
@@ -100,6 +104,14 @@ evaluate( tree_t * restrict ptree, int ply, int turn )
       return (int)ptree->save_eval[ply] / FV_SCALE;
     }
 
+ #ifdef ENTERING_KING
+    {
+	 int ek_b = eking_value_black(ptree), ek_w = eking_value_white(ptree);
+	 ptree->save_eking_black[ply] = (ek_b >= 0 ? eking[ek_b] * FV_SCALE : 0);
+	 ptree->save_eking_white[ply] = (ek_w >= 0 ? eking[ek_w] * FV_SCALE : 0);
+    }
+ #endif
+
   if ( ehash_probe( HASH_KEY, HAND_B, &score ) )
     {
       score                 = turn ? -score : score;
@@ -168,10 +180,17 @@ evaluate( tree_t * restrict ptree, int ply, int turn )
   
   score += sum;
   score += MATERIAL * FV_SCALE;
+
+#if defined(ENTERING_KING_BONUS)
+  score += ENTERING_KING_score(ptree);
+#endif
+
 #if defined(INANIWA_SHIFT)
   score += inaniwa_score( ptree );
 #endif
-
+#ifdef ENTERING_KING
+  score += ptree->save_eking_black[ply] - ptree->save_eking_black[ply - 1] - (ptree->save_eking_white[ply] - ptree->save_eking_white[ply - 1]);
+#endif
   ehash_store( HASH_KEY, HAND_B, score );
 
   score = turn ? -score : score;
@@ -243,6 +262,10 @@ calc_difference( const tree_t * restrict ptree, int ply, int turn,
 {
   bitboard_t bb;
   int nlist, diff, from, to, sq, pc;
+
+#if defined(ENTERING_KING_BONUS)
+  if (ENTERING_KING_flag) { return 0; }
+#endif
 
 #if defined(INANIWA_SHIFT)
   if ( inaniwa_flag ) { return 0; }
@@ -359,7 +382,10 @@ calc_difference( const tree_t * restrict ptree, int ply, int turn,
     diff -= doapc( ptree, pc, from, list0, list1, nlist );
   
   }
-  
+  #ifdef ENTERING_KING
+    diff += ptree->save_eking_black[ply] - ptree->save_eking_black[ply - 1] - (ptree->save_eking_white[ply] - ptree->save_eking_white[ply - 1]);
+  #endif
+
   diff += turn ? ptree->save_eval[ply-1] : - ptree->save_eval[ply-1];
 
   *pscore = diff;
@@ -734,6 +760,344 @@ doacapt( const tree_t * restrict ptree, int pc, int turn, int hand_index,
   return sum;
 }
 
+#if defined(ENTERING_KING_BONUS)
+static int
+ENTERING_KING_score(const tree_t * restrict ptree)
+{
+	int score;
+
+	if (!ENTERING_KING_flag) { return 0; }
+
+	score = 0;
+	if (ENTERING_KING_flag == 1) {
+		//後手番の玉の位置が入玉フラグ位置の時、先手玉位置に加点
+		if (BOARD[A9] == king) { score += 1000 * FV_SCALE; } //1000 900 900 850 800 850 900 900 1000
+		if (BOARD[B9] == king) { score +=  900 * FV_SCALE; } // 850 750 750 700 650 700 750 750  850
+		if (BOARD[C9] == king) { score +=  900 * FV_SCALE; } // 680 630 630 580 530 580 630 630  680
+		if (BOARD[D9] == king) { score +=  850 * FV_SCALE; } // 500 500 500 450 400 450 500 500  500
+		if (BOARD[E9] == king) { score +=  800 * FV_SCALE; } // 330 330 330 280 230 280 330 330  330
+		if (BOARD[F9] == king) { score +=  850 * FV_SCALE; } // 180 180 180 130  90 130 180 180  180
+		if (BOARD[G9] == king) { score +=  900 * FV_SCALE; } //  90  90  90   0   0   0  90  90   90
+		if (BOARD[H9] == king) { score +=  900 * FV_SCALE; } //   0   0   0   0   0   0   0   0    0
+		if (BOARD[I9] == king) { score += 1000 * FV_SCALE; } //-200   0   0-200-225-200   0   0 -200
+
+		if (BOARD[A8] == king) { score += 850 * FV_SCALE; } // 850 750 750 700 650 700 750 750  850
+		if (BOARD[B8] == king) { score += 750 * FV_SCALE; }
+		if (BOARD[C8] == king) { score += 750 * FV_SCALE; }
+		if (BOARD[D8] == king) { score += 700 * FV_SCALE; }
+		if (BOARD[E8] == king) { score += 650 * FV_SCALE; }
+		if (BOARD[F8] == king) { score += 700 * FV_SCALE; }
+		if (BOARD[G8] == king) { score += 750 * FV_SCALE; }
+		if (BOARD[H8] == king) { score += 750 * FV_SCALE; }
+		if (BOARD[I8] == king) { score += 850 * FV_SCALE; }
+
+		if (BOARD[A7] == king) { score += 680 * FV_SCALE; } // 680 630 630 580 530 580 630 630  680
+		if (BOARD[B7] == king) { score += 630 * FV_SCALE; }
+		if (BOARD[C7] == king) { score += 630 * FV_SCALE; }
+		if (BOARD[D7] == king) { score += 580 * FV_SCALE; }
+		if (BOARD[E7] == king) { score += 530 * FV_SCALE; }
+		if (BOARD[F7] == king) { score += 580 * FV_SCALE; }
+		if (BOARD[G7] == king) { score += 630 * FV_SCALE; }
+		if (BOARD[H7] == king) { score += 630 * FV_SCALE; }
+		if (BOARD[I7] == king) { score += 680 * FV_SCALE; }
+
+		if (BOARD[A6] == king) { score += 500 * FV_SCALE; } // 500 500 500 450 400 450 500 500  500
+		if (BOARD[B6] == king) { score += 500 * FV_SCALE; }
+		if (BOARD[C6] == king) { score += 500 * FV_SCALE; }
+		if (BOARD[D6] == king) { score += 450 * FV_SCALE; }
+		if (BOARD[E6] == king) { score += 400 * FV_SCALE; }
+		if (BOARD[F6] == king) { score += 450 * FV_SCALE; }
+		if (BOARD[G6] == king) { score += 500 * FV_SCALE; }
+		if (BOARD[H6] == king) { score += 500 * FV_SCALE; }
+		if (BOARD[I6] == king) { score += 500 * FV_SCALE; }
+
+		if (BOARD[A5] == king) { score += 330 * FV_SCALE; } // 330 330 330 280 230 280 330 330  330
+		if (BOARD[B5] == king) { score += 330 * FV_SCALE; }
+		if (BOARD[C5] == king) { score += 330 * FV_SCALE; }
+		if (BOARD[D5] == king) { score += 280 * FV_SCALE; }
+		if (BOARD[E5] == king) { score += 230 * FV_SCALE; }
+		if (BOARD[F5] == king) { score += 280 * FV_SCALE; }
+		if (BOARD[G5] == king) { score += 330 * FV_SCALE; }
+		if (BOARD[H5] == king) { score += 330 * FV_SCALE; }
+		if (BOARD[I5] == king) { score += 330 * FV_SCALE; }
+
+		if (BOARD[A4] == king) { score += 180 * FV_SCALE; } // 180 180 180 130  90 130 180 180  180
+		if (BOARD[B4] == king) { score += 180 * FV_SCALE; }
+		if (BOARD[C4] == king) { score += 180 * FV_SCALE; }
+		if (BOARD[D4] == king) { score += 130 * FV_SCALE; }
+		if (BOARD[E4] == king) { score +=  90 * FV_SCALE; }
+		if (BOARD[F4] == king) { score += 130 * FV_SCALE; }
+		if (BOARD[G4] == king) { score += 180 * FV_SCALE; }
+		if (BOARD[H4] == king) { score += 180 * FV_SCALE; }
+		if (BOARD[I4] == king) { score += 180 * FV_SCALE; }
+
+		if (BOARD[A3] == king) { score += 90 * FV_SCALE; } //  90   90   90    0    0    0   90   90   90
+		if (BOARD[B3] == king) { score += 90 * FV_SCALE; }
+		if (BOARD[C3] == king) { score += 90 * FV_SCALE; }
+		if (BOARD[D3] == king) { score += 0 * FV_SCALE; }
+		if (BOARD[E3] == king) { score += 0 * FV_SCALE; }
+		if (BOARD[F3] == king) { score += 0 * FV_SCALE; }
+		if (BOARD[G3] == king) { score += 90 * FV_SCALE; }
+		if (BOARD[H3] == king) { score += 90 * FV_SCALE; }
+		if (BOARD[I3] == king) { score += 90 * FV_SCALE; }
+
+		if (BOARD[A1] == king) { score -= 200 * FV_SCALE; } //-200    0    0 -200 -225 -200    0    0 -200
+		if (BOARD[B1] == king) { score -= 0 * FV_SCALE; }
+		if (BOARD[C1] == king) { score -= 0 * FV_SCALE; }
+		if (BOARD[D1] == king) { score -= 200 * FV_SCALE; }
+		if (BOARD[E1] == king) { score -= 225 * FV_SCALE; }
+		if (BOARD[F1] == king) { score -= 200 * FV_SCALE; }
+		if (BOARD[G1] == king) { score -= 0 * FV_SCALE; }
+		if (BOARD[H1] == king) { score -= 0 * FV_SCALE; }
+		if (BOARD[I1] == king) { score -= 200 * FV_SCALE; }
+		//後手番の玉の位置が入玉フラグ位置の時、後手玉位置に加点
+		if (BOARD[A1] == -king) { score -= 1000 * FV_SCALE; } //1000 900 900 850 800 850 900 900 1000
+		if (BOARD[B1] == -king) { score -=  900 * FV_SCALE; }
+		if (BOARD[C1] == -king) { score -=  900 * FV_SCALE; }
+		if (BOARD[D1] == -king) { score -=  850 * FV_SCALE; }
+		if (BOARD[E1] == -king) { score -=  800 * FV_SCALE; }
+		if (BOARD[F1] == -king) { score -=  850 * FV_SCALE; }
+		if (BOARD[G1] == -king) { score -=  900 * FV_SCALE; }
+		if (BOARD[H1] == -king) { score -=  900 * FV_SCALE; }
+		if (BOARD[I1] == -king) { score -= 1000 * FV_SCALE; }
+
+		if (BOARD[A2] == -king) { score -= 850 * FV_SCALE; } // 850 750 750 700 650 700 750 750  850
+		if (BOARD[B2] == -king) { score -= 750 * FV_SCALE; }
+		if (BOARD[C2] == -king) { score -= 750 * FV_SCALE; }
+		if (BOARD[D2] == -king) { score -= 700 * FV_SCALE; }
+		if (BOARD[E2] == -king) { score -= 650 * FV_SCALE; }
+		if (BOARD[F2] == -king) { score -= 700 * FV_SCALE; }
+		if (BOARD[G2] == -king) { score -= 750 * FV_SCALE; }
+		if (BOARD[H2] == -king) { score -= 750 * FV_SCALE; }
+		if (BOARD[I2] == -king) { score -= 850 * FV_SCALE; }
+
+		if (BOARD[A3] == -king) { score -= 680 * FV_SCALE; } // 680 630 630 580 530 580 630 630  680
+		if (BOARD[B3] == -king) { score -= 630 * FV_SCALE; }
+		if (BOARD[C3] == -king) { score -= 630 * FV_SCALE; }
+		if (BOARD[D3] == -king) { score -= 580 * FV_SCALE; }
+		if (BOARD[E3] == -king) { score -= 530 * FV_SCALE; }
+		if (BOARD[F3] == -king) { score -= 580 * FV_SCALE; }
+		if (BOARD[G3] == -king) { score -= 630 * FV_SCALE; }
+		if (BOARD[H3] == -king) { score -= 630 * FV_SCALE; }
+		if (BOARD[I3] == -king) { score -= 680 * FV_SCALE; }
+
+		if (BOARD[A4] == -king) { score -= 500 * FV_SCALE; } // 500 500 500 450 400 450 500 500  500
+		if (BOARD[B4] == -king) { score -= 500 * FV_SCALE; }
+		if (BOARD[C4] == -king) { score -= 500 * FV_SCALE; }
+		if (BOARD[D4] == -king) { score -= 450 * FV_SCALE; }
+		if (BOARD[E4] == -king) { score -= 400 * FV_SCALE; }
+		if (BOARD[F4] == -king) { score -= 450 * FV_SCALE; }
+		if (BOARD[G4] == -king) { score -= 500 * FV_SCALE; }
+		if (BOARD[H4] == -king) { score -= 500 * FV_SCALE; }
+		if (BOARD[I4] == -king) { score -= 500 * FV_SCALE; }
+
+		if (BOARD[A5] == -king) { score -= 330 * FV_SCALE; } // 330 330 330 280 230 280 330 330  330
+		if (BOARD[B5] == -king) { score -= 330 * FV_SCALE; }
+		if (BOARD[C5] == -king) { score -= 330 * FV_SCALE; }
+		if (BOARD[D5] == -king) { score -= 280 * FV_SCALE; }
+		if (BOARD[E5] == -king) { score -= 230 * FV_SCALE; }
+		if (BOARD[F5] == -king) { score -= 280 * FV_SCALE; }
+		if (BOARD[G5] == -king) { score -= 330 * FV_SCALE; }
+		if (BOARD[H5] == -king) { score -= 330 * FV_SCALE; }
+		if (BOARD[I5] == -king) { score -= 330 * FV_SCALE; }
+
+		if (BOARD[A6] == -king) { score -= 180 * FV_SCALE; } // 180 180 180 130  90 130 180 180  180
+		if (BOARD[B6] == -king) { score -= 180 * FV_SCALE; }
+		if (BOARD[C6] == -king) { score -= 180 * FV_SCALE; }
+		if (BOARD[D6] == -king) { score -= 130 * FV_SCALE; }
+		if (BOARD[E6] == -king) { score -=  90 * FV_SCALE; }
+		if (BOARD[F6] == -king) { score -= 130 * FV_SCALE; }
+		if (BOARD[G6] == -king) { score -= 180 * FV_SCALE; }
+		if (BOARD[H6] == -king) { score -= 180 * FV_SCALE; }
+		if (BOARD[I6] == -king) { score -= 180 * FV_SCALE; }
+
+		if (BOARD[A7] == -king) { score -= 90 * FV_SCALE; } //  90   90   90    0    0    0   90   90   90
+		if (BOARD[B7] == -king) { score -= 90 * FV_SCALE; }
+		if (BOARD[C7] == -king) { score -= 90 * FV_SCALE; }
+		if (BOARD[D7] == -king) { score -= 0 * FV_SCALE; }
+		if (BOARD[E7] == -king) { score -= 0 * FV_SCALE; }
+		if (BOARD[F7] == -king) { score -= 0 * FV_SCALE; }
+		if (BOARD[G7] == -king) { score -= 90 * FV_SCALE; }
+		if (BOARD[H7] == -king) { score -= 90 * FV_SCALE; }
+		if (BOARD[I7] == -king) { score -= 90 * FV_SCALE; }
+
+		if (BOARD[A9] == -king) { score += 200 * FV_SCALE; } //-200    0    0 -200 -225 -200    0    0 -200
+		if (BOARD[B9] == -king) { score += 0 * FV_SCALE; }
+		if (BOARD[C9] == -king) { score += 0 * FV_SCALE; }
+		if (BOARD[D9] == -king) { score += 200 * FV_SCALE; }
+		if (BOARD[E9] == -king) { score += 225 * FV_SCALE; }
+		if (BOARD[F9] == -king) { score += 200 * FV_SCALE; }
+		if (BOARD[G9] == -king) { score += 0 * FV_SCALE; }
+		if (BOARD[H9] == -king) { score += 0 * FV_SCALE; }
+		if (BOARD[I9] == -king) { score += 200 * FV_SCALE; }
+
+ }
+	else {
+		//先手番の玉の位置が入玉フラグ位置の時、後手玉位置に加点
+		if (BOARD[A1] == -king) { score -= 1000 * FV_SCALE; } //1000 900 900 850 800 850 900 900 1000
+		if (BOARD[B1] == -king) { score -=  900 * FV_SCALE; }
+		if (BOARD[C1] == -king) { score -=  900 * FV_SCALE; }
+		if (BOARD[D1] == -king) { score -=  850 * FV_SCALE; }
+		if (BOARD[E1] == -king) { score -=  800 * FV_SCALE; }
+		if (BOARD[F1] == -king) { score -=  850 * FV_SCALE; }
+		if (BOARD[G1] == -king) { score -=  900 * FV_SCALE; }
+		if (BOARD[H1] == -king) { score -=  900 * FV_SCALE; }
+		if (BOARD[I1] == -king) { score -= 1000 * FV_SCALE; }
+
+		if (BOARD[A2] == -king) { score -= 850 * FV_SCALE; } // 850 750 750 700 650 700 750 750  850
+		if (BOARD[B2] == -king) { score -= 750 * FV_SCALE; }
+		if (BOARD[C2] == -king) { score -= 750 * FV_SCALE; }
+		if (BOARD[D2] == -king) { score -= 700 * FV_SCALE; }
+		if (BOARD[E2] == -king) { score -= 650 * FV_SCALE; }
+		if (BOARD[F2] == -king) { score -= 700 * FV_SCALE; }
+		if (BOARD[G2] == -king) { score -= 750 * FV_SCALE; }
+		if (BOARD[H2] == -king) { score -= 750 * FV_SCALE; }
+		if (BOARD[I2] == -king) { score -= 850 * FV_SCALE; }
+
+		if (BOARD[A3] == -king) { score -= 680 * FV_SCALE; } // 680 630 630 580 530 580 630 630  680
+		if (BOARD[B3] == -king) { score -= 630 * FV_SCALE; }
+		if (BOARD[C3] == -king) { score -= 630 * FV_SCALE; }
+		if (BOARD[D3] == -king) { score -= 580 * FV_SCALE; }
+		if (BOARD[E3] == -king) { score -= 530 * FV_SCALE; }
+		if (BOARD[F3] == -king) { score -= 580 * FV_SCALE; }
+		if (BOARD[G3] == -king) { score -= 630 * FV_SCALE; }
+		if (BOARD[H3] == -king) { score -= 630 * FV_SCALE; }
+		if (BOARD[I3] == -king) { score -= 680 * FV_SCALE; }
+
+		if (BOARD[A4] == -king) { score -= 500 * FV_SCALE; } // 500 500 500 450 400 450 500 500  500
+		if (BOARD[B4] == -king) { score -= 500 * FV_SCALE; }
+		if (BOARD[C4] == -king) { score -= 500 * FV_SCALE; }
+		if (BOARD[D4] == -king) { score -= 450 * FV_SCALE; }
+		if (BOARD[E4] == -king) { score -= 400 * FV_SCALE; }
+		if (BOARD[F4] == -king) { score -= 450 * FV_SCALE; }
+		if (BOARD[G4] == -king) { score -= 500 * FV_SCALE; }
+		if (BOARD[H4] == -king) { score -= 500 * FV_SCALE; }
+		if (BOARD[I4] == -king) { score -= 500 * FV_SCALE; }
+
+		if (BOARD[A5] == -king) { score -= 330 * FV_SCALE; } // 330 330 330 280 230 280 330 330  330
+		if (BOARD[B5] == -king) { score -= 330 * FV_SCALE; }
+		if (BOARD[C5] == -king) { score -= 330 * FV_SCALE; }
+		if (BOARD[D5] == -king) { score -= 280 * FV_SCALE; }
+		if (BOARD[E5] == -king) { score -= 230 * FV_SCALE; }
+		if (BOARD[F5] == -king) { score -= 280 * FV_SCALE; }
+		if (BOARD[G5] == -king) { score -= 330 * FV_SCALE; }
+		if (BOARD[H5] == -king) { score -= 330 * FV_SCALE; }
+		if (BOARD[I5] == -king) { score -= 330 * FV_SCALE; }
+
+		if (BOARD[A6] == -king) { score -= 180 * FV_SCALE; } // 180 180 180 130  90 130 180 180  180
+		if (BOARD[B6] == -king) { score -= 180 * FV_SCALE; }
+		if (BOARD[C6] == -king) { score -= 180 * FV_SCALE; }
+		if (BOARD[D6] == -king) { score -= 130 * FV_SCALE; }
+		if (BOARD[E6] == -king) { score -=  90 * FV_SCALE; }
+		if (BOARD[F6] == -king) { score -= 130 * FV_SCALE; }
+		if (BOARD[G6] == -king) { score -= 180 * FV_SCALE; }
+		if (BOARD[H6] == -king) { score -= 180 * FV_SCALE; }
+		if (BOARD[I6] == -king) { score -= 180 * FV_SCALE; }
+
+		if (BOARD[A7] == -king) { score -= 90 * FV_SCALE; } //  90   90   90    0    0    0   90   90   90
+		if (BOARD[B7] == -king) { score -= 90 * FV_SCALE; }
+		if (BOARD[C7] == -king) { score -= 90 * FV_SCALE; }
+		if (BOARD[D7] == -king) { score -= 0 * FV_SCALE; }
+		if (BOARD[E7] == -king) { score -= 0 * FV_SCALE; }
+		if (BOARD[F7] == -king) { score -= 0 * FV_SCALE; }
+		if (BOARD[G7] == -king) { score -= 90 * FV_SCALE; }
+		if (BOARD[H7] == -king) { score -= 90 * FV_SCALE; }
+		if (BOARD[I7] == -king) { score -= 90 * FV_SCALE; }
+
+		if (BOARD[A9] == -king) { score += 200 * FV_SCALE; } //-200    0    0 -200 -225 -200    0    0 -200
+		if (BOARD[B9] == -king) { score += 0 * FV_SCALE; }
+		if (BOARD[C9] == -king) { score += 0 * FV_SCALE; }
+		if (BOARD[D9] == -king) { score += 200 * FV_SCALE; }
+		if (BOARD[E9] == -king) { score += 225 * FV_SCALE; }
+		if (BOARD[F9] == -king) { score += 200 * FV_SCALE; }
+		if (BOARD[G9] == -king) { score += 0 * FV_SCALE; }
+		if (BOARD[H9] == -king) { score += 0 * FV_SCALE; }
+		if (BOARD[I9] == -king) { score += 200 * FV_SCALE; }
+		//先手番の玉の位置が入玉フラグ位置の時、先手玉位置に加点
+		if (BOARD[A9] == king) { score += 1000 * FV_SCALE; } //1000 900 900 850 800 850 900 900 1000
+		if (BOARD[B9] == king) { score +=  900 * FV_SCALE; }
+		if (BOARD[C9] == king) { score +=  900 * FV_SCALE; }
+		if (BOARD[D9] == king) { score +=  850 * FV_SCALE; }
+		if (BOARD[E9] == king) { score +=  800 * FV_SCALE; }
+		if (BOARD[F9] == king) { score +=  850 * FV_SCALE; }
+		if (BOARD[G9] == king) { score +=  900 * FV_SCALE; }
+		if (BOARD[H9] == king) { score +=  900 * FV_SCALE; }
+		if (BOARD[I9] == king) { score += 1000 * FV_SCALE; }
+
+		if (BOARD[A8] == king) { score += 850 * FV_SCALE; } // 850 750 750 700 650 700 750 750  850
+		if (BOARD[B8] == king) { score += 750 * FV_SCALE; }
+		if (BOARD[C8] == king) { score += 750 * FV_SCALE; }
+		if (BOARD[D8] == king) { score += 700 * FV_SCALE; }
+		if (BOARD[E8] == king) { score += 650 * FV_SCALE; }
+		if (BOARD[F8] == king) { score += 700 * FV_SCALE; }
+		if (BOARD[G8] == king) { score += 750 * FV_SCALE; }
+		if (BOARD[H8] == king) { score += 750 * FV_SCALE; }
+		if (BOARD[I8] == king) { score += 850 * FV_SCALE; }
+
+		if (BOARD[A7] == king) { score += 680 * FV_SCALE; } // 680 630 630 580 530 580 630 630  680
+		if (BOARD[B7] == king) { score += 630 * FV_SCALE; }
+		if (BOARD[C7] == king) { score += 630 * FV_SCALE; }
+		if (BOARD[D7] == king) { score += 580 * FV_SCALE; }
+		if (BOARD[E7] == king) { score += 530 * FV_SCALE; }
+		if (BOARD[F7] == king) { score += 580 * FV_SCALE; }
+		if (BOARD[G7] == king) { score += 630 * FV_SCALE; }
+		if (BOARD[H7] == king) { score += 630 * FV_SCALE; }
+		if (BOARD[I7] == king) { score += 680 * FV_SCALE; }
+
+		if (BOARD[A6] == king) { score += 500 * FV_SCALE; } // 500 500 500 450 400 450 500 500  500
+		if (BOARD[B6] == king) { score += 500 * FV_SCALE; }
+		if (BOARD[C6] == king) { score += 500 * FV_SCALE; }
+		if (BOARD[D6] == king) { score += 450 * FV_SCALE; }
+		if (BOARD[E6] == king) { score += 400 * FV_SCALE; }
+		if (BOARD[F6] == king) { score += 450 * FV_SCALE; }
+		if (BOARD[G6] == king) { score += 500 * FV_SCALE; }
+		if (BOARD[H6] == king) { score += 500 * FV_SCALE; }
+		if (BOARD[I6] == king) { score += 500 * FV_SCALE; }
+
+		if (BOARD[A5] == king) { score += 330 * FV_SCALE; } // 330 330 330 280 230 280 330 330  330
+		if (BOARD[B5] == king) { score += 330 * FV_SCALE; }
+		if (BOARD[C5] == king) { score += 330 * FV_SCALE; }
+		if (BOARD[D5] == king) { score += 280 * FV_SCALE; }
+		if (BOARD[E5] == king) { score += 230 * FV_SCALE; }
+		if (BOARD[F5] == king) { score += 280 * FV_SCALE; }
+		if (BOARD[G5] == king) { score += 330 * FV_SCALE; }
+		if (BOARD[H5] == king) { score += 330 * FV_SCALE; }
+		if (BOARD[I5] == king) { score += 330 * FV_SCALE; }
+
+		if (BOARD[A4] == king) { score += 180 * FV_SCALE; } // 180 180 180 130  90 130 180 180  180
+		if (BOARD[B4] == king) { score += 180 * FV_SCALE; }
+		if (BOARD[C4] == king) { score += 180 * FV_SCALE; }
+		if (BOARD[D4] == king) { score += 130 * FV_SCALE; }
+		if (BOARD[E4] == king) { score +=  90 * FV_SCALE; }
+		if (BOARD[F4] == king) { score += 130 * FV_SCALE; }
+		if (BOARD[G4] == king) { score += 180 * FV_SCALE; }
+		if (BOARD[H4] == king) { score += 180 * FV_SCALE; }
+		if (BOARD[I4] == king) { score += 180 * FV_SCALE; }
+
+		if (BOARD[A3] == king) { score += 90 * FV_SCALE; } //  90   90   90    0    0    0   90   90   90
+		if (BOARD[B3] == king) { score += 90 * FV_SCALE; }
+		if (BOARD[C3] == king) { score += 90 * FV_SCALE; }
+		if (BOARD[D3] == king) { score += 0 * FV_SCALE; }
+		if (BOARD[E3] == king) { score += 0 * FV_SCALE; }
+		if (BOARD[F3] == king) { score += 0 * FV_SCALE; }
+		if (BOARD[G3] == king) { score += 90 * FV_SCALE; }
+		if (BOARD[H3] == king) { score += 90 * FV_SCALE; }
+		if (BOARD[I3] == king) { score += 90 * FV_SCALE; }
+
+		if (BOARD[A1] == king) { score -= 200 * FV_SCALE; } //-200    0    0 -200 -225 -200    0    0 -200
+		if (BOARD[B1] == king) { score -= 0 * FV_SCALE; }
+		if (BOARD[C1] == king) { score -= 0 * FV_SCALE; }
+		if (BOARD[D1] == king) { score -= 200 * FV_SCALE; }
+		if (BOARD[E1] == king) { score -= 225 * FV_SCALE; }
+		if (BOARD[F1] == king) { score -= 200 * FV_SCALE; }
+		if (BOARD[G1] == king) { score -= 0 * FV_SCALE; }
+		if (BOARD[H1] == king) { score -= 0 * FV_SCALE; }
+		if (BOARD[I1] == king) { score -= 200 * FV_SCALE; }
+	}
+
+	return score;
+}
+#endif
 
 #if defined(INANIWA_SHIFT)
 static int
@@ -745,7 +1109,7 @@ inaniwa_score( const tree_t * restrict ptree )
 
   score = 0;
   if ( inaniwa_flag == 2 ) {
-
+	  //先手番の歩が突かれていない時、後手番の桂馬初期配置に減点
     if ( BOARD[B9] == -knight ) { score += 700 * FV_SCALE; }
     if ( BOARD[H9] == -knight ) { score += 700 * FV_SCALE; }
     
@@ -764,7 +1128,7 @@ inaniwa_score( const tree_t * restrict ptree )
     if ( BOARD[E5] ==  pawn )   { score += 200 * FV_SCALE; }
 
   } else {
-
+	  //後手番の歩が突かれていない時、先手番の桂馬初期配置に減点
     if ( BOARD[B1] ==  knight ) { score -= 700 * FV_SCALE; }
     if ( BOARD[H1] ==  knight ) { score -= 700 * FV_SCALE; }
     
@@ -785,4 +1149,73 @@ inaniwa_score( const tree_t * restrict ptree )
 
   return score;
 }
+#endif
+#if defined(ENTERING_KING)
+int CONV eking_value_black_position(tree_t * restrict ptree, unsigned char bking, bitboard_t *visited) {
+   if (airank[bking] <= rank3)return 0;
+   if (BBContract(*visited, abb_mask[bking])) return -1;
+   BBOr(*visited, *visited, abb_mask[bking]);
+   if (aifile[bking] != file1) {
+      int p_lu = bking - 10;
+      if (BOARD[p_lu] == empty && !is_black_attacked(ptree, p_lu)) {
+        int ret_lu = eking_value_black_position(ptree, p_lu, visited);
+      }
+     }
+     {
+       int p_u = bking - 9;
+       if (BOARD[p_u] == empty && !is_black_attacked(ptree, p_u)) {
+          int ret_u = eking_value_black_position(ptree, p_u, visited);
+          if (0 <= ret_u) return ret_u + 1;
+        }
+        }
+     if (aifile[bking] != file9) {
+     int p_ru = bking - 8;
+      if (BOARD[p_ru] == empty && !is_black_attacked(ptree, p_ru)) {
+          int ret_ru = eking_value_black_position(ptree, p_ru, visited);
+          if (0 <= ret_ru) return ret_ru + 1;
+        }
+     }
+    return -1;
+}
+int CONV eking_value_white_position(tree_t * restrict ptree, unsigned char wking, bitboard_t *visited) {
+   if (airank[wking] >= rank7)return 0;
+   if (BBContract(*visited, abb_mask[wking])) return -1;
+   BBOr(*visited, *visited, abb_mask[wking]);
+   if (aifile[wking] != file1) {
+      int p_ld = wking + 8;
+      if (BOARD[p_ld] == empty && !is_white_attacked(ptree, p_ld)) {
+          int ret_ld = eking_value_white_position(ptree, p_ld, visited);
+          if (0 <= ret_ld) return ret_ld + 1;
+        }
+      }
+      {
+        int p_d = wking + 9;
+        if (BOARD[p_d] == empty && !is_white_attacked(ptree, p_d)) {
+           int ret_d = eking_value_white_position(ptree, p_d, visited);
+           if (0 <= ret_d) return ret_d + 1;
+        }
+        }
+   if (aifile[wking] != file9) {
+       int p_rd = wking + 10;
+       if (BOARD[p_rd] == empty && !is_white_attacked(ptree, p_rd)) {
+           int ret_rd = eking_value_white_position(ptree, p_rd, visited);
+           if (0 <= ret_rd) return ret_rd + 1;
+        }
+      }
+    return -1;
+}
+int CONV eking_value_black(tree_t * restrict ptree) {
+    bitboard_t visited;
+    BBIni(visited);
+    return eking_value_black_position(ptree, SQ_BKING, &visited);
+}
+int CONV eking_value_white(tree_t * restrict ptree) {
+    bitboard_t visited;
+    BBIni(visited);
+    return eking_value_white_position(ptree, SQ_WKING, &visited);
+}
+int CONV eking_value(tree_t * restrict ptree, int turn)
+ {
+   return turn ? eking_value_white(ptree) : eking_value_black(ptree);
+    }
 #endif

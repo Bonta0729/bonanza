@@ -15,6 +15,16 @@ ini_game( tree_t * restrict ptree, const min_posi_t *pmin_posi, int flag,
   int piece;
   int sq, iret;
 
+#if defined(ENTERING_KING_BONUS)
+  if (ENTERING_KING_flag)
+    {
+	  ENTERING_KING_flag = 0;
+	  ehash_clear();
+	  iret = ini_trans_table();
+	  if (iret < 0) { return iret; }
+    }
+#endif
+
 #if defined(INANIWA_SHIFT)
   if ( inaniwa_flag )
     {
@@ -519,7 +529,13 @@ com_turn_start( tree_t * restrict ptree, int flag )
 	  if ( iret < 0 ) { return iret; }
 	}
 #endif
-      OutCsaShogi( "resign\n" );
+#if defined(USI)
+	  if (usi_mode != usi_off)
+	  {
+		  USIOut("bestmove resign\n");
+	  }
+#endif
+	  OutCsaShogi( "resign\n" );
     }
   else {
 #if defined(USI)

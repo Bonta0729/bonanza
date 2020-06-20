@@ -45,9 +45,22 @@ int CONV load_fv( void )
       str_error = str_io_error;
       return -2;
     }
+  iret = file_close(pf);
+  if (iret < 0) { return iret; }
+
+  #ifdef ENTERING_KING
+    pf = file_open(str_fv_eking, "rb");
+    if (pf == NULL) { return -2; }
+
+    size = 7;
+    if (fread(eking, sizeof(short), size, pf) != size)
+      {
+        memset(eking, 0, size * sizeof(short));
+      }
 
   iret = file_close( pf );
   if ( iret < 0 ) { return iret; }
+#endif
 
 #if 0
 #  define X0 -10000
@@ -213,6 +226,15 @@ ini( tree_t * restrict ptree )
       game_status      |= flag_nobeep;
       resign_threshold  = 65535;
     }
+  usi_inc = 0;
+  if (usi_mode != usi_off)
+  {
+	  game_status |= flag_noprompt;
+	  game_status |= flag_nostdout;
+	  game_status |= flag_noponder;
+	  game_status |= flag_nobeep;
+	  resign_threshold = 65535;
+  }
 #endif
 
 #if defined(_WIN32)
@@ -270,6 +292,10 @@ ini( tree_t * restrict ptree )
 #if defined(MPV)
   mpv_num   = 1;
   mpv_width = 2 * MT_CAP_PAWN;
+#endif
+
+#if defined(ENTERING_KING_BONUS)
+  ENTERING_KING_flag = 0;
 #endif
 
 #if defined(INANIWA_SHIFT)

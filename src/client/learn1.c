@@ -13,11 +13,11 @@
 
 #if ! defined(MINIMUM)
 
-#  define SEARCH_DEPTH      2
+#  define SEARCH_DEPTH      1
 #  define NUM_RESULT        8
 #  define MAX_RECORD_LENGTH 1024
 #  define DOT_INTERVAL      10
-#  define MAX_BOOK_PLY      64
+#  define MAX_BOOK_PLY      128
 #  define NumBookCluster    256
 #  define NumBookEntry      0x1000
 #  define SIZE_PV_BUFFER    0x100000
@@ -617,6 +617,9 @@ read_game( parse1_data_t *pdata )
       if ( ! imove )
 	{
 	  *(pdata->ptree)  = *ptree;
+	  pdata->ptree->move_last[0] = pdata->ptree->amove;
+	  pdata->ptree->move_last[1] = pdata->ptree->amove;
+	  pdata->ptree->tlp_id = 0;
 	  pdata->root_turn = root_turn;
 	}
 

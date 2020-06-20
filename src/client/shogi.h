@@ -7,7 +7,7 @@
 
 #if defined(_WIN32)
 
-#  include <Winsock2.h>
+#  include <winsock2.h>
 #  define CONV              __fastcall
 #  define SCKT_NULL         INVALID_SOCKET
 typedef SOCKET sckt_t;
@@ -36,6 +36,7 @@ typedef int sckt_t;
 #  define strtok_r      strtok_s
 #  define read          _read
 #  define strncpy( dst, src, len ) strncpy_s( dst, len, src, _TRUNCATE )
+#  define strncat( dst, src, len ) strncat_s( dst, len, src, _TRUNCATE )
 #  define snprintf( buf, size, fmt, ... )   \
           _snprintf_s( buf, size, _TRUNCATE, fmt, __VA_ARGS__ )
 #  define vsnprintf( buf, size, fmt, list ) \
@@ -77,6 +78,13 @@ extern unsigned char ailast_one[512];
 #  endif
 #endif
 
+#if defined(USI)
+#  define NO_STDOUT
+#  if ! defined(WIN32_PIPE)
+#    define WIN32_PIPE
+#  endif
+#endif
+
 #if defined(TLP)
 #  define SHARE volatile
 #  define SEARCH_ABORT ( root_abort || ptree->tlp_abort )
@@ -95,9 +103,9 @@ extern unsigned char ailast_one[512];
 #define TC_NMOVE                35U
 #define SEC_MARGIN              15U
 #define SEC_KEEP_ALIVE          180U
-#define TIME_RESPONSE           200U
+#define TIME_RESPONSE           1200U
 #define RESIGN_THRESHOLD       ( ( MT_CAP_DRAGON * 5 ) /  8 )
-#define BNZ_VER                 "6.0"
+#define BNZ_VER                 "6.0.1b.TCi"
 
 #define REP_MAX_PLY             32
 #define REP_HIST_LEN            256
@@ -130,9 +138,15 @@ extern unsigned char ailast_one[512];
 #define FMG_MISC_KING          ( ( MT_CAP_DRAGON * 2 ) /  8 )
 #define FMG_CAP_KING           ( ( MT_CAP_DRAGON * 2 ) /  8 )
 
-#define FV_WINDOW               256
-#define FV_SCALE                32
-#define FV_PENALTY             ( 0.2 / (double)FV_SCALE )
+#define KIFU_RECORDS            25600
+/*#define KIFU_RATIO    ( 48566 / (double)KIFU_RECORDS )  // =1.8971 =nÇ∆Ç∑ÇÈÅB2(n^2)*Å„n=9.914    */
+// FV_PENALTY=0.2/(2*n^2*Å„n)/32 (SEARCH_DEPTH=1)
+#define FV_WINDOW               288     // (default=256)SEARCH_DEPTH=1ÇÃéû320,2ÇÃéû304,3ÇÃéû288  äwèKä˚ïàdepth8ÇÃéû240,depth9ä˚ïàÇÃéû256
+#define FV_SCALE                32     // FV_PENALTYÇÕÅASEARCH_DEPTH=2ÇÃéû Å„2,SEARCH_DEPTH=3ÇÃéû 2(=Å„4)Çä|ÇØÇÈÅB
+#define FV_PENALTY             ( 0.02 / (double)FV_SCALE ) // 0.2/( 2*(1.8971^2)*Å„1.8971 ) (default=0.2)
+#define L2_C1         ( (double)dv - ((double)v / (FV_WINDOW*2)) )
+#define L2_C2         ( 0.00025600 / ((double)FV_PENALTY*FV_SCALE*200000) )   //(0.00000001*KIFU_RECORDS)/(200000 * 0.01813)
+// dv=C*v/Å„(dv)^2
 
 #define MPV_MAX_PV              16
 
@@ -248,6 +262,7 @@ extern unsigned char ailast_one[512];
 #define Inv(sq)             (nsquare-1-sq)
 #define PcOnSq(k,i)         pc_on_sq[k][(i)*((i)+3)/2]
 #define PcPcOnSq(k,i,j)     pc_on_sq[k][(i)*((i)+1)/2+(j)]
+#define PcPcOnSq2(k,i,j)    pc_on_sq2[k][i * fe_end + j]
 
 /*
   xxxxxxxx xxxxxxxx xxx11111  pawn
@@ -416,7 +431,7 @@ enum { mask_file1 = (( 1U << 18 | 1U << 9 | 1U ) << 8) };
 
 enum { flag_diag1 = b0001, flag_plus = b0010 };
 
-enum { score_draw     =     1,
+enum { score_draw     =    64,
        score_max_eval = 30000,
        score_matelong = 30002,
        score_mate1ply = 32598,
@@ -588,12 +603,18 @@ typedef struct { bitboard_t gold, silver, knight, lance; } check_table_t;
 
 #if ! defined(MINIMUM)
 typedef struct { fpos_t fpos;  unsigned int games, moves, lines; } rpos_t;
+#ifdef LEARN_EKING
+typedef struct {
+ float eking[7];
+} param_t;
+#else
 typedef struct {
   double pawn, lance, knight, silver, gold, bishop, rook;
   double pro_pawn, pro_lance, pro_knight, pro_silver, horse, dragon;
   float pc_on_sq[nsquare][fe_end*(fe_end+1)/2];
   float kkp[nsquare][nsquare][kkp_end];
 } param_t;
+#endif
 #endif
 
 typedef enum { mode_write, mode_read_write, mode_read } record_mode_t;
@@ -734,6 +755,10 @@ struct tree {
   unsigned short hist_good[ HIST_SIZE ];
   short save_material[ PLY_MAX ];
   int save_eval[ PLY_MAX+1 ];
+#ifdef ENTERING_KING
+  int save_eking_black[PLY_MAX + 1];
+  int save_eking_white[PLY_MAX + 1];
+#endif
   unsigned char nsuc_check[ PLY_MAX+1 ];
   int nrep;
 #if defined(TLP)
@@ -812,12 +837,17 @@ extern unsigned int time_start;
 extern unsigned int time_max_limit;
 extern unsigned int time_limit;
 extern unsigned int time_response;
-extern unsigned int sec_limit;
-extern unsigned int sec_limit_up;
+extern unsigned int sec_limit;     //éùÇøéûä‘
+extern unsigned int sec_limit_up;  //ïbì«Ç›éûä‘
 extern unsigned int sec_limit_depth;
-extern unsigned int sec_elapsed;
-extern unsigned int sec_b_total;
-extern unsigned int sec_w_total;
+extern unsigned int sec_elapsed;   //è¡îÔéûä‘
+extern unsigned int sec_b_total;   //êÊéËÇÃè¡îÔéûä‘
+extern unsigned int sec_w_total;   //å„éËÇÃè¡îÔéûä‘
+extern unsigned int btime;         //êÊéËÇÃécÇËéûä‘
+extern unsigned int wtime;         //å„éËÇÃécÇËéûä‘
+extern unsigned int binc;          //êÊéËÇÃâ¡éZéûä‘
+extern unsigned int winc;          //å„éËÇÃâ¡éZéûä‘
+
 
 extern record_t record_problems;
 extern record_t record_game;
@@ -829,6 +859,9 @@ extern int p_value_pm[15];
 extern int p_value[31];
 extern short pc_on_sq[nsquare][fe_end*(fe_end+1)/2];
 extern short kkp[nsquare][nsquare][kkp_end];
+#ifdef ENTERING_KING
+extern short eking[7];
+#endif
 
 extern uint64_t ehash_tbl[ EHASH_MASK + 1 ];
 extern rand_work_t rand_work;
@@ -926,6 +959,9 @@ extern const char *str_off;
 extern const char *str_book;
 extern const char *str_hash;
 extern const char *str_fv;
+#ifdef ENTERING_KING
+extern const char *str_fv_eking;
+#endif
 extern const char *str_book_error;
 extern const char *str_perpet_check;
 extern const char *str_bad_cmdline;
@@ -985,6 +1021,7 @@ void CONV pv_copy( tree_t * restrict ptree, int ply );
 void set_derivative_param( void );
 void CONV set_search_limit_time( int turn );
 void CONV ehash_clear( void );
+int CONV get_trans_table_used(void);
 void CONV hash_store_pv( const tree_t * restrict ptree, unsigned int move,
 			 int turn );
 void CONV check_futile_score_quies( const tree_t * restrict ptree,
@@ -1083,6 +1120,11 @@ int CONV search( tree_t * restrict ptree, int alpha, int beta, int turn,
 int CONV searchr( tree_t * restrict ptree, int alpha, int beta, int turn,
 	     int depth );
 int CONV evaluate( tree_t * restrict ptree, int ply, int turn );
+#ifdef ENTERING_KING
+int CONV eking_value_black(tree_t * restrict ptree);
+int CONV eking_value_white(tree_t * restrict ptree);
+int CONV eking_value(tree_t * restrict ptree, int turn);
+#endif
 int CONV swap( const tree_t * restrict ptree, unsigned int move, int alpha,
 	       int beta, int turn );
 int file_close( FILE *pf );
@@ -1294,6 +1336,7 @@ enum usi_mode { usi_off, usi_on };
 extern enum usi_mode usi_mode;
 extern unsigned int usi_time_out_last;
 extern unsigned int usi_byoyomi;
+extern unsigned int usi_inc;
 void CONV usi_out( const char *format, ... );
 int CONV usi_book( tree_t * restrict ptree );
 int CONV usi_root_list( tree_t * restrict ptree );
@@ -1324,6 +1367,10 @@ extern check_table_t w_chk_tbl[nsquare];
 
 #if defined(DBG_EASY)
 extern unsigned int easy_move;
+#endif
+
+#if defined(ENTERING_KING_BONUS)
+extern int ENTERING_KING_flag;
 #endif
 
 #if defined(INANIWA_SHIFT)

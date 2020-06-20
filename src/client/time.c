@@ -54,6 +54,12 @@ set_search_limit_time( int turn )
       Out( "- time ctrl: %u -- %u\n", time_limit, time_max_limit );
       return;
     }
+ /* else if (usi_mode != usi_off && usi_inc)
+  {
+	  time_max_limit = time_limit = usi_inc;
+	  Out("- time ctrl: %u -- %u\n", time_limit, time_max_limit);
+	  return;
+  }*/
 #endif
 
   /* not punctual to the time */
@@ -63,33 +69,124 @@ set_search_limit_time( int turn )
       u1 = sec_limit_up * 5U;
     }
   /* have byo-yomi */
-  else if ( sec_limit_up )
-    {
-      unsigned int umax, umin, sec_elapsed, sec_left;
+  else if (sec_limit_up)
+  {
+	  unsigned int umax, umin, sec_elapsed, sec_left/*, wtime, btime, winc, binc*/;
+	  //消費時間
+	  sec_elapsed = turn ? sec_w_total : sec_b_total;
+	  //残り時間=持ち時間が消費時間以上なら、持ち時間-消費時間。
+	  sec_left = (sec_elapsed <= sec_limit) ? sec_limit - sec_elapsed : 0;// turn ? wtime : btime;
+	  u0 = (sec_left + (TC_NMOVE / 2U)) / TC_NMOVE;
 
-      sec_elapsed = turn ? sec_w_total : sec_b_total;
-      sec_left    = ( sec_elapsed <= sec_limit ) ? sec_limit - sec_elapsed : 0;
-      u0          = ( sec_left + ( TC_NMOVE / 2U ) ) / TC_NMOVE;
+	  /*
+	  t = 2s is not beneficial since 2.8s are almost the same as 1.8s.
+	  So that, we rather want to use up the ordinary time.
+	  */
+	  if (u0 == 2U) { u0 = 3U; }
 
-      /*
-	t = 2s is not beneficial since 2.8s are almost the same as 1.8s.
-        So that, we rather want to use up the ordinary time.
-      */
-      if ( u0 == 2U ) { u0 = 3U; }
+	  /* 'byo-yomi' is so long that the ordinary time-limit is negligible. */
+	  if (sec_left > sec_limit && sec_elapsed <sec_limit) {
+		  // 残り時間が持ち時間より多い。(フィッシャーモード用) 定跡を抜けた直後に多めに時間を使う。
+		  u0 = (sec_left / 36) + sec_limit_up + (sec_limit / 72); // 残り時間÷32 + 秒読み時間 + 持ち時間÷64
+		  umax = (sec_left / 12) + sec_limit_up + (sec_limit / 48); // 最大思考時間
+		  umin = sec_limit_up + 1;                // 最小思考時間=秒読み時間+1ms
+	  }
+	  else if (sec_left > sec_limit && sec_elapsed >= sec_limit) {
+		  // 残り時間が持ち時間より多い。(フィッシャーモード用) 消費時間が持ち時間を超えた場合。
+		  u0 = (sec_left / 33) + sec_limit_up + (sec_limit / 64); // 残り時間÷32 + 秒読み時間 + 持ち時間÷64
+		  umax = (sec_left / 11) + sec_limit_up + (sec_limit / 48); // 最大思考時間
+		  umin = sec_limit_up + 1;                // 最小思考時間=秒読み時間+1ms
+	  }
+	  else if (sec_left >= sec_limit * 0.90) {
+		  // 残り時間が持ち時間の90％以上。定跡を抜けた直後に多めに時間を使う。
+		  u0 = (sec_left / 30) + (sec_limit_up * 12U) / 10 + (sec_limit / 69); // 残り時間÷39 + 秒読み時間 + 持ち時間÷70
+		  umax = (sec_left / 10) + (sec_limit_up * 20U) / 10 + (sec_limit / 32); // 最大思考時間
+		  umin = sec_limit_up + 1;                // 最小思考時間=秒読み時間+1ms
+	  }
+	  else if (sec_limit * 0.30 > sec_elapsed /*&& sec_left >= sec_limit*/)
+	  {
+		  // 消費時間が持ち時間の30%未満。序盤は少し時間を節約。
+		  u0 = (sec_left / 50) + sec_limit_up + (sec_limit / 192);  // 残り時間÷80 + 秒読み時間 + 持ち時間÷200 
+		  umax = (sec_left / 9) + sec_limit_up + (sec_limit / 96); // 最大思考時間
+		  umin = (sec_limit_up * 6U)/10 + 1;           // 最小思考時間=秒読み時間*0.6
+	  }
+	  else if (sec_limit * 0.56 > sec_elapsed /*&& sec_left >= sec_limit*/)
+	  {
+		  // 消費時間が持ち時間の56%未満。中盤に時間を使う。 
+		  u0 = (sec_left / 32) + (sec_limit_up * 2U) + (sec_limit / 64); // 残り時間÷29 + 秒読み時間 + 持ち時間÷80
+		  umax = (sec_left /16) + (sec_limit_up * 4U) + (sec_limit / 32); // 最大思考時間
+		  umin = (sec_limit_up * 12U) / 10 + 1;          // 最小思考時間=秒読み時間*1.2
+	  }
+	  else if (sec_limit * 0.67 > sec_elapsed /*&& sec_left >= sec_limit*/)
+	  {
+		  // 消費時間が持ち時間の67%未満。中盤に時間を使う。 
+		  u0 = (sec_left / 26) + (sec_limit_up * 3U) + (sec_limit / 72); //残り時間÷24 + 秒読み時間 + 持ち時間÷90
+		  umax = (sec_left / 13) + (sec_limit_up * 6U) + (sec_limit / 43); // 最大思考時間
+		  umin = (sec_limit_up * 14U) / 10 + 1;         // 最小思考時間=秒読み時間*1.4
+	  }
+	  else if (sec_limit * 0.86 > sec_elapsed /*&& sec_left >= sec_limit*/)
+	  {
+		  // 消費時間が持ち時間の86%未満。中盤に時間を使う。 
+		  u0 = (sec_left / 20) + (sec_limit_up * 4U) + (sec_limit / 78); //残り時間÷24 + 秒読み時間 + 持ち時間÷90
+		  umax = (sec_left / 10) + (sec_limit_up * 8U) + (sec_limit / 54); // 最大思考時間
+		  umin = (sec_limit_up * 16U) / 10 + 1;         // 最小思考時間=秒読み時間*1.6
+	  }
+	  else if (sec_limit * 0.95 > sec_elapsed /*&& sec_left >= sec_limit*/)
+	  {
+		  // 消費時間が持ち時間の95%未満。中終盤に時間を使う。 
+		  u0 = (sec_left / 14) + (sec_limit_up * 5U) + (sec_limit /86); //残り時間÷24 + 秒読み時間 + 持ち時間÷90
+		  umax = (sec_left / 7) + (sec_limit_up * 10U) + (sec_limit / 70); // 最大思考時間
+		  umin = (sec_limit_up * 18U) / 10 + 1;         // 最小思考時間=秒読み時間*1.8
+	  }
+	  else if (sec_limit > sec_elapsed /*&& sec_left >= sec_limit*/) {
+		  // 消費時間が持ち時間の100%未満。終盤に時間を使う。 
+		 // u0 =  sec_left / 3 + (sec_limit_up * 7) + (sec_limit / 96); //残り時間÷3 + 秒読み時間*7 + 持ち時間÷90
+		  u0 = (sec_left / 8) + (sec_limit_up * 6U) + (sec_limit / 96);
+		  umax = (sec_left / 4) + (sec_limit_up * 12U) + (sec_limit / 86); // 最大思考時間
+		  umin = (sec_limit_up * 2U) + 1;         // 最小思考時間=秒読み時間*2.0
+	  }
+	  else if (sec_left >= sec_limit * 0.67) {//sec_limit_up * 21) {
+		  // (フィッシャーモード用)残り時間が持ち時間の30％以上。中終盤に時間を使う。 
+		  u0 = (sec_left / 24) + (sec_limit_up * 14U) / 10 + (sec_limit / 102); //残り時間÷24 + 秒読み時間 + 持ち時間÷90
+		  umax = sec_left / 7 + (sec_limit_up * 22U) / 10 + (sec_limit / 96); // 最大思考時間
+		  umin = (sec_limit_up * 5U) / 10 + 1;         // 最小思考時間=秒読み時間*0.5
+	  }
+	  else if (sec_left >= sec_limit * 0.33) {//sec_limit_up * 21) {
+											  // (フィッシャーモード用)残り時間が持ち時間の30％以上。中終盤に時間を使う。 
+		  u0 = (sec_left / 18) + (sec_limit_up * 12U) / 10 + (sec_limit / 128); //残り時間÷24 + 秒読み時間 + 持ち時間÷90
+		  umax = sec_left / 6 + (sec_limit_up * 18U) / 10 + (sec_limit / 108); // 最大思考時間
+		  umin = (sec_limit_up * 5U) / 10 + 1;         // 最小思考時間=秒読み時間*0.5
+	  }
+	  else if (sec_left >= sec_limit * 0.06) {
+		  // (フィッシャーモード用)残り時間が持ち時間の6％以上。秒読み時間を使うこと前提の時間配分に。
+		  u0 = (sec_left / 12) + sec_limit_up + (sec_limit / 540); // 残り時間÷12 + 秒読み時間 + 持ち時間÷540
+		  umax = (sec_left / 5) + (sec_limit_up * 14U) / 10 + (sec_limit / 300);  // 最大思考時間
+		  umin = (sec_limit_up * 4U)/10 + 1;          // 最小思考時間=秒読み時間*0.4
+	  }
+	  else if (sec_left > sec_limit * 0.03) {
+		  // (フィッシャーモード用)残り時間が持ち時間の3％以上。秒読み時間を使うこと前提の時間配分に。
+		  u0 = (sec_left / 9) + sec_limit_up; // 残り時間÷8 + 秒読み時間
+		  umax = (sec_left / 6) + sec_limit_up; // 最大思考時間
+		  umin = (sec_limit_up * 3U) / 10 + 1;      // 最小思考時間=秒読み時間*0.3
+	  }
+	  // 端数の残り時間は、使いきる
+	  else //(sec_left <= sec_limit * 0.03)
+	  {
+		  u0 = (sec_left * 6)/100 + (sec_limit_up*90U)/100;
+		  umax = (sec_left * 12)/100 + (sec_limit_up * 93U) / 100;
+		  umin = (sec_left * 3)/100 + (sec_limit_up * 67U) / 100;
+	  }
 
-      /* 'byo-yomi' is so long that the ordinary time-limit is negligible. */
-      if ( u0 < sec_limit_up * 5U ) { u0 = sec_limit_up * 5U; }
-    
-      u1 = u0 * 5U;
+	  u1 = u0 * 5U;
 
-      umax = sec_left + sec_limit_up;
-      umin = 1;
+	  umax = sec_left + (sec_limit_up * 90) / 100;
+	  umin = 1;
 
-      if ( umax < u0 ) { u0 = umax; }
-      if ( umax < u1 ) { u1 = umax; }
-      if ( umin > u0 ) { u0 = umin; }
-      if ( umin > u1 ) { u1 = umin; }
-    }
+	  if (umax < u0) { u0 = umax; }
+	  if (umax < u1) { u1 = umax; }
+	  if (umin > u0) { u0 = umin; }
+	  if (umin > u1) { u1 = umin; }
+  }
   /* no byo-yomi */
   else {
     unsigned int sec_elapsed, sec_left;

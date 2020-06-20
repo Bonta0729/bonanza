@@ -84,6 +84,10 @@ unsigned int hash_mask;
 unsigned int sec_elapsed;
 unsigned int sec_b_total;
 unsigned int sec_w_total;
+unsigned int btime;         //æè‚Ìc‚èŠÔ
+unsigned int wtime;         //Œãè‚Ìc‚èŠÔ
+unsigned int binc;          //æè‚Ì‰ÁZŠÔ
+unsigned int winc;          //Œãè‚Ì‰ÁZŠÔ
 unsigned int sec_limit;
 unsigned int sec_limit_up;
 unsigned int sec_limit_depth;
@@ -138,6 +142,9 @@ int p_value_pm[15];
 int p_value[31];
 short pc_on_sq[nsquare][pos_n];
 short kkp[nsquare][nsquare][kkp_end];
+#ifdef ENTERING_KING
+short eking[7];
+#endif
 unsigned char ansuc_check_save[NUM_UNMAKE];
 unsigned char book_section[ MAX_SIZE_SECTION+1 ];
 unsigned char adirec[ nsquare ][ nsquare ];
@@ -238,6 +245,7 @@ unsigned int mnj_moves_ignore[MAX_LEGAL_MOVES];
 enum usi_mode usi_mode;
 unsigned int usi_time_out_last;
 unsigned int usi_byoyomi;
+unsigned int usi_inc;
 #endif
 
 check_table_t b_chk_tbl[nsquare];
@@ -250,19 +258,29 @@ unsigned char aifirst_one[512];
 unsigned char ailast_one[512];
 #endif
 
+#if defined(__x86_64__) || defined(_WIN64)
+#define BNZ_64BIT "_x64"
+#else
+#define BNZ_64BIT ""
+#endif
+
 #if defined(NDEBUG)
 #  if ! defined(CSASHOGI)
-const char *str_myname = ( "Bonanza " BNZ_VER );
+const char *str_myname = ( "Bonanza_" BNZ_VER BNZ_64BIT);
 #  else
-const char *str_myname = ( "Bonanza " BNZ_VER );
+const char *str_myname = ( "Bonanza_" BNZ_VER BNZ_64BIT);
 #  endif
 #else
-const char *str_myname = ( "Bonanza " BNZ_VER " Debug Build ("
+const char *str_myname = ( "Bonanza_" BNZ_VER BNZ_64BIT " Debug Build ("
 			   __TIME__ " " __DATE__ ")" );
 #endif
 
 #if defined(DBG_EASY)
 unsigned int easy_move;
+#endif
+
+#if defined(ENTERING_KING_BONUS)
+int ENTERING_KING_flag;
 #endif
 
 #if defined(INANIWA_SHIFT)
@@ -279,6 +297,7 @@ const char *str_on            = "on";
 const char *str_off           = "off";
 const char *str_book          = "book.bin";
 const char *str_fv            = "fv.bin";
+const char *str_fv_eking      = "fv_eking.bin";
 const char *str_book_error    = "invalid opening book";
 const char *str_io_error      = "I/O error";
 const char *str_perpet_check  = "perpetual check";
