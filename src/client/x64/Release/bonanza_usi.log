@@ -1,0 +1,65 @@
+﻿cl : コマンド ライン warning D9025: '/DUSI' より '/UUSI' が優先されます。
+cl : コマンド ライン warning D9025: '/DENTERING_KING' より '/UENTERING_KING' が優先されます。
+cl : コマンド ライン warning D9025: '/DENTERING_KING_BONUS' より '/UENTERING_KING_BONUS' が優先されます。
+  attack.c
+  bitop.c
+  book.c
+  csa.c
+  data.c
+  debug.c
+  dfpn.c
+dfpn.c(886): warning C4206: 非標準の拡張機能が使用されています: 翻訳単位が空です。
+  dfpnhash.c
+dfpnhash.c(624): warning C4206: 非標準の拡張機能が使用されています: 翻訳単位が空です。
+  evaldiff.c
+  evaluate.c
+  gencap.c
+  genchk.c
+  gendrop.c
+  genevasn.c
+  gennocap.c
+  hash.c
+  ini.c
+  io.c
+  iterate.c
+  learn1.c
+  コンパイル中...
+  learn2.c
+  main.c
+  makemove.c
+  mate1ply.c
+  mate3.c
+  movgenex.c
+  next.c
+  phash.c
+  ponder.c
+  problem.c
+  proce.c
+  quiesrch.c
+  rand.c
+  root.c
+  sckt.c
+  search.c
+  searchr.c
+  swap.c
+swap.c(7): warning C4459: 'root_alpha' を宣言すると、グローバル宣言が隠蔽されます
+  c:\local\bonanza\bonanza_usi\client\shogi.h(802): note: 'root_alpha' の宣言を確認してください
+swap.c(8): warning C4459: 'root_beta' を宣言すると、グローバル宣言が隠蔽されます
+  c:\local\bonanza\bonanza_usi\client\shogi.h(803): note: 'root_beta' の宣言を確認してください
+  thread.c
+  time.c
+time.c(74): warning C4459: 'sec_elapsed' を宣言すると、グローバル宣言が隠蔽されます
+  c:\local\bonanza\bonanza_usi\client\shogi.h(843): note: 'sec_elapsed' の宣言を確認してください
+time.c(192): warning C4459: 'sec_elapsed' を宣言すると、グローバル宣言が隠蔽されます
+  c:\local\bonanza\bonanza_usi\client\shogi.h(843): note: 'sec_elapsed' の宣言を確認してください
+  コンパイル中...
+  unmake.c
+  utility.c
+  valid.c
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1198,5): warning MSB8012: TargetPath(C:\local\bonanza\bonanza_usi\client\x64\Release\bonanza_usi.exe) が Linker の OutputFile プロパティ値 (C:\local\bonanza\bonanza_usi\client\x64\Release\bonanza_usi_x64.exe) と一致しません。このため、プロジェクトが正常にビルドされない可能性があります。この問題を解決するには、$(OutDir)、$(TargetName)、および $(TargetExt) の各プロパティ値が、%(Link.OutputFile) で指定されている値と一致することを確認してください。
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1200,5): warning MSB8012: TargetName(bonanza_usi) が Linker の OutputFile プロパティ値 (bonanza_usi_x64) と一致しません。このため、プロジェクトが正常にビルドされない可能性があります。この問題を解決するには、$(OutDir)、$(TargetName)、および $(TargetExt) の各プロパティ値が、%(Link.OutputFile) で指定されている値と一致することを確認してください。
+LINK : warning LNK4075: /INCREMENTAL は /LTCG の指定によって無視されます。
+  コード生成しています。
+  コード生成が終了しました。
+  bonanza_usi.vcxproj -> C:\local\bonanza\bonanza_usi\client\x64\Release\bonanza_usi.exe
+  bonanza_usi.vcxproj -> C:\local\bonanza\bonanza_usi\client\x64\Release\bonanza_usi.pdb (Full PDB)
