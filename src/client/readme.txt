@@ -436,6 +436,9 @@ directory to dump log files.
     This command prints the shogi board. If you want to flip the
     board, set 'num' to 2. If not, set it to 1.
 
+- eking_value
+    This command prints the entering king value of both players.
+
 - s
     Bonanza makes a prompt reply while thinking as soon as this
     command is used.

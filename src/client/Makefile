@@ -22,18 +22,25 @@ OBJS =data.o main.o io.o proce.o utility.o ini.o attack.o book.o makemove.o \
 # -DINANIWA_SHIFT    enables an Inaniwa strategy detection.
 # -DDFPN             build the DFPN worker of mate-problems server.
 # -DDFPN_CLIENT      enables the client-mode of mate-problem server.
+# -DENTERING_KING    enables entering king related codes
+# -DLEARN_EKING      learn only the entering king parameter 
 
-OPT =-DNDEBUG -DMINIMUM -DHAVE_SSE4 -msse4.1 -DDFPN -DTLP -DDFPN_CLIENT -DINANIWA_SHIFT -DMNJ_LAN -DCSA_LAN
+OPT =-DNDEBUG -DDFPN -DDFPN_CLIENT -DINANIWA_SHIFT -DMNJ_LAN -DCSA_LAN -DENTERING_KING -DLEARN_EKING -DTLP
+# OPT =-DNDEBUG -DMINIMUM -DHAVE_SSE4 -msse4.1 -DDFPN -DTLP -DDFPN_CLIENT -DINANIWA_SHIFT -DMNJ_LAN -DCSA_LAN
 
 help:
 	@echo "try targets as:"
 	@echo
+	@echo "  mingw"
 	@echo "  gcc"
 	@echo "  gcc-pg"
 	@echo "  gcc-pgo"
 	@echo "  icc"
 	@echo "  icc-pgo"
 	@echo "  icc-ampl"
+
+mingw:
+	$(MAKE) CC=x86_64-w64-mingw32-gcc CFLAGS='-std=gnu99 -O2 -Wall $(OPT)' LDFLAG2='-lws2_32 -lm -lpthread' bonanza.exe
 
 gcc:
 	$(MAKE) CC=gcc CFLAGS='-std=gnu99 -O2 -Wall $(OPT)' LDFLAG1='-lm -lpthread' bonanza
